@@ -39,18 +39,4 @@ export class Buyer {
         if (!this.phone.trim()) errors.phone = 'Укажите телефон';
         return errors;
     }
-
-    validateStep1(): Record<string, string> {
-        const errors: Record<string, string> = {};
-        if (!this.payment) errors.payment = 'Не выбран вид оплаты';
-        if (!this.address.trim()) errors.address = 'Укажите адрес доставки';
-        return errors;
-    }
-
-    validateStep2(): Record<string, string> {
-        const errors: Record<string, string> = {};
-        if (!this.email.trim()) errors.email = 'Укажите емэйл';
-        if (!this.phone.trim()) errors.phone = 'Укажите телефон';
-        return errors;
-    }
 }
