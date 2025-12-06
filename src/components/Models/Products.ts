@@ -1,28 +1,31 @@
-import {IProduct} from '../../types';
+import {IProduct} from "../../types";
+import {IEvents} from "../base/Events";
 
-export class Products {
-    private items: IProduct[] = [];
-    private selectedItem: IProduct | null = null;
+export interface IProducts {
+    productCards: IProduct[];
+    selectedСard: IProduct;
+    setPreview(item: IProduct): void;
+}
 
-    constructor() {}
+export class Products implements IProducts {
+    protected _productCards: IProduct[];
+    selectedСard: IProduct;
 
-    setItems(items: IProduct[]): void {
-        this.items = Array.isArray(items) ? [...items] : [];
+    constructor(protected events: IEvents) {
+        this._productCards = []
     }
 
-    getItems(): IProduct[] {
-        return [...this.items];
+    set productCards(data: IProduct[]) {
+        this._productCards = data;
+        this.events.emit('productCards:receive');
     }
 
-    getById(id: string): IProduct | undefined {
-        return this.items.find((product) => product.id === id);
+    get productCards() {
+        return this._productCards;
     }
 
-    setSelectedItem(item: IProduct | null): void {
-        this.selectedItem = item;
-    }
-
-    getSelectedItem(): IProduct | null {
-        return this.selectedItem;
+    setPreview(item: IProduct) {
+        this.selectedСard = item;
+        this.events.emit('modalCard:open', item)
     }
 }

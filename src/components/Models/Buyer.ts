@@ -1,42 +1,101 @@
-import {IBuyer, TPayment} from '../../types';
+import {IEvents} from '../base/Events';
+import {FormErrors, TPayment} from '../../types'
 
 export class Buyer {
-    private payment: TPayment | null = null;
-    private email = '';
-    private phone = '';
-    private address = '';
+    payment: TPayment | null = null;
+    email = '';
+    phone = '';
+    address = '';
+    total: number;
+    items: string[];
+    formErrors: FormErrors = {};
 
-    constructor() {}
-
-    save(data: Partial<IBuyer>): void {
-        if (data.payment !== undefined) this.payment = data.payment;
-        if (data.email !== undefined) this.email = data.email;
-        if (data.phone !== undefined) this.phone = data.phone;
-        if (data.address !== undefined) this.address = data.address;
+    constructor(protected events: IEvents) {
+        this.payment = null;
+        this.email = '';
+        this.phone = '';
+        this.address = '';
+        this.total = 0;
+        this.items = [];
     }
 
-    get(): IBuyer {
+    // принимаем значение строки "address"
+    setOrderAddress(field: string, value: string) {
+        if (field === 'address') {
+            this.address = value;
+        }
+
+        if (this.validateOrder()) {
+            this.events.emit('order:ready', this.getOrderLot());
+        }
+    }
+
+    // валидация данных строки "address"
+    validateOrder() {
+        const regexp = /^[а-яА-ЯёЁa-zA-Z0-9\s\/.,-]{7,}$/;
+        const errors: typeof this.formErrors = {};
+
+        if (!this.address) {
+            errors.address = 'Необходимо указать адрес'
+        } else if (!regexp.test(this.address)) {
+            errors.address = 'Укажите настоящий адрес'
+        } else if (!this.payment) {
+            errors.payment = 'Выберите способ оплаты'
+        }
+
+        this.formErrors = errors;
+        this.events.emit('formErrors:address', this.formErrors);
+        return Object.keys(errors).length === 0;
+    }
+
+    // принимаем значение данных строк "Email" и "Телефон"
+    setOrderData(field: string, value: string) {
+        if (field === 'email') {
+            this.email = value;
+        } else if (field === 'phone') {
+            this.phone = value;
+        }
+
+        if (this.validateContacts()) {
+            this.events.emit('order:ready', this.getOrderLot());
+        }
+    }
+
+    // Валидация данных строк "Email" и "Телефон"
+    validateContacts() {
+        const regexpEmail = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
+        const regexpPhone = /^((8|\+7)[\- ]?)?(\(?\d{3}\)?[\- ]?)?[\d\- ]{10}$/;
+        const errors: typeof this.formErrors = {};
+
+        if (!this.email) {
+            errors.email = 'Необходимо указать email'
+        } else if (!regexpEmail.test(this.email)) {
+            errors.email = 'Некорректный адрес электронной почты'
+        }
+
+        if (this.phone.startsWith('8')) {
+            this.phone = '+7' + this.phone.slice(1);
+        }
+
+        if (!this.phone) {
+            errors.phone = 'Необходимо указать телефон'
+        } else if (!regexpPhone.test(this.phone)) {
+            errors.phone = 'Некорректный формат номера телефона'
+        }
+
+        this.formErrors = errors;
+        this.events.emit('formErrors:change', this.formErrors);
+        return Object.keys(errors).length === 0;
+    }
+
+    getOrderLot() {
         return {
             payment: this.payment,
             email: this.email,
             phone: this.phone,
             address: this.address,
+            total: this.total,
+            items: this.items
         };
-    }
-
-    clear(): void {
-        this.payment = null;
-        this.email = '';
-        this.phone = '';
-        this.address = '';
-    }
-
-    validate(): Record<string, string> {
-        const errors: Record<string, string> = {};
-        if (!this.payment) errors.payment = 'Не выбран вид оплаты';
-        if (!this.address.trim()) errors.address = 'Укажите адрес доставки';
-        if (!this.email.trim()) errors.email = 'Укажите емэйл';
-        if (!this.phone.trim()) errors.phone = 'Укажите телефон';
-        return errors;
     }
 }
