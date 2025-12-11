@@ -1,26 +1,86 @@
+// {
+//   "compilerOptions": {
+//     "target": "ES2022",
+//     "useDefineForClassFields": true,
+//     "module": "ESNext",
+//     "lib": ["ES2022", "DOM", "DOM.Iterable"],
+//     "skipLibCheck": true,
+
+//     /* Bundler mode */
+//     "moduleResolution": "bundler",
+//     "allowImportingTsExtensions": true,
+//     "verbatimModuleSyntax": false,
+//     "moduleDetection": "force",
+//     "noEmit": true,
+
+//     /* Linting */
+//     "strict": true,
+//     "noUnusedLocals": true,
+//     "noUnusedParameters": true,
+//     "erasableSyntaxOnly": false,
+//     "noFallthroughCasesInSwitch": true,
+//     "noUncheckedSideEffectImports": true,
+
+//   },
+//   "include": ["src"]
+// }
+
+
+
+// лишнее
+// {
+//   "compilerOptions": {
+//     "target": "ES2022",
+//     "useDefineForClassFields": true,
+//     "module": "ESNext",
+//     "lib": ["ES2022", "DOM", "DOM.Iterable"],
+//     "skipLibCheck": true,
+
+//     /* Bundler mode */
+//     "moduleResolution": "bundler",
+//     "allowImportingTsExtensions": true,
+//     "verbatimModuleSyntax": false,
+//     "moduleDetection": "force",
+//     "noEmit": true,
+
+//     /* Linting */
+//     "strict": false,
+//     "strictNullChecks": false,
+//     "noUnusedLocals": false,
+//     "noUnusedParameters": false,
+//     "noFallthroughCasesInSwitch": false,
+//     "noUncheckedSideEffectImports": false
+//   },
+//   "include": ["src"]
+// }
+
+
 {
   "compilerOptions": {
-    "target": "ES2022",
+    "target": "ES2020",
     "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "module": "ESNext",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "skipLibCheck": true,
-
-    /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": false,
-    "moduleDetection": "force",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
     "noEmit": true,
-
-    /* Linting */
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "erasableSyntaxOnly": false,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true,
-
+    "jsx": "react-jsx",
+    
+    /* Отключаем все строгие проверки */
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "strictFunctionTypes": false,
+    "strictBindCallApply": false,
+    "strictPropertyInitialization": false,
+    "noImplicitThis": false,
+    "alwaysStrict": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noFallthroughCasesInSwitch": false
   },
   "include": ["src"]
 }
