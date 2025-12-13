@@ -1,13 +1,13 @@
 import { ensureElement } from "../utils/utils";
 import { Form } from "./base/Form";
 import { IEvents } from "./base/Events";
-import { TPayment, IBuyerErrors } from "../types";
+import { TPayment } from "../types";
 
 interface IOrder {
   payment: TPayment | null;
   address: string;
-  errors: Partial<IBuyerErrors>;
-  valid?: boolean;
+  errors: string; // Изменено: теперь string вместо Partial<IBuyerErrors>
+  valid: boolean; // Обязательное поле
 }
 
 export class Order extends Form<IOrder> {
@@ -37,15 +37,8 @@ export class Order extends Form<IOrder> {
     this.setupEventListeners();
   }
 
-  protected getSubmitEventName(): string {
+  protected get submitEventName(): string {
     return "order:next";
-  }
-
-  protected getErrorMessages(errors: Partial<IBuyerErrors>): string[] {
-    const errorMessages: string[] = [];
-    if (errors.payment) errorMessages.push(errors.payment);
-    if (errors.address) errorMessages.push(errors.address);
-    return errorMessages;
   }
 
   private setupEventListeners(): void {

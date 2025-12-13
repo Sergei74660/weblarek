@@ -16,7 +16,8 @@ import { CardCatalog } from "./components/card/CardCatalog";
 import { CardPreview } from "./components/card/CardPreview";
 import { CardBasket }  from "./components/card/CardBasket";
 import { EventEmitter } from "./components/base/Events";
-import { IOrderRequest, IProduct } from "./types";
+import { IOrderRequest, IProduct, TPayment } from "./types";
+import { Gallery } from "./components/Gallery";
 
 // ============ Вспомогательные функции ============
 
@@ -79,6 +80,7 @@ const modalContainer = ensureElement<HTMLElement>("#modal-container");
 
 const header = new Header(events, headerContainer);
 const modal = new Modal(events, modalContainer);
+const gallery = new Gallery(galleryContainer, events);
 
 // Шаблоны для создания компонентов
 const cardCatalogTemplate = ensureElement<HTMLTemplateElement>("#card-catalog");
@@ -129,7 +131,7 @@ catalogModel.on("items:changed", () => {
     return cardElement;
   });
 
-  galleryContainer.replaceChildren(...cards);
+  gallery.render({ catalog: cards });
 });
 
 // Обработка изменения выбранного товара для просмотра
@@ -184,25 +186,33 @@ buyerModel.on("data:changed", () => {
   const data = buyerModel.getData();
   const allErrors = buyerModel.validate();
 
-  // Обновление формы заказа (всегда, чтобы она была актуальной при открытии)
-  const orderErrors = {
-    payment: allErrors.payment,
-    address: allErrors.address,
-  };
+  // Формируем строку ошибок для формы заказа
+  const orderErrorMessages: string[] = [];
+  if (allErrors.payment) orderErrorMessages.push(allErrors.payment);
+  if (allErrors.address) orderErrorMessages.push(allErrors.address);
+  const orderErrorsString = orderErrorMessages.join(", ");
+
+  // Формируем строку ошибок для формы контактов
+  const contactsErrorMessages: string[] = [];
+  if (allErrors.email) contactsErrorMessages.push(allErrors.email);
+  if (allErrors.phone) contactsErrorMessages.push(allErrors.phone);
+  const contactsErrorsString = contactsErrorMessages.join(", ");
+
+  // Обновление формы заказа
   order.render({
     payment: data.payment,
     address: data.address,
-    errors: orderErrors,
+    errors: orderErrorsString, // Строка с ошибками
+    valid: !allErrors.payment && !allErrors.address // true если нет ошибок
   });
-  order.valid = !orderErrors.payment && !orderErrors.address;
 
-  // Обновление формы контактов (всегда, чтобы она была актуальной при открытии)
+  // Обновление формы контактов
   contacts.render({
     email: data.email,
     phone: data.phone,
-    errors: { email: allErrors.email, phone: allErrors.phone },
+    errors: contactsErrorsString, // Строка с ошибками
+    valid: !allErrors.email && !allErrors.phone // true если нет ошибок
   });
-  contacts.valid = !allErrors.email && !allErrors.phone;
 });
 
 // ============ Обработчики событий от представлений ============
@@ -233,16 +243,12 @@ events.on("card:remove", (data: { id: string }) => {
 
 // Открытие корзины
 events.on("basket:open", () => {
-  // Корзина обновляется через событие items:changed от модели Cart
-  // Здесь только открываем модальное окно
   modal.render({ content: basketElement });
   modal.open();
 });
 
 // Оформление заказа
 events.on("basket:order", () => {
-  // Форма заказа обновляется через событие data:changed от модели Buyer
-  // Здесь только открываем модальное окно с формой заказа
   modal.render({ content: orderElement });
 });
 
@@ -256,54 +262,15 @@ events.on("order:next", () => {
   const isOrderValid = !orderErrors.payment && !orderErrors.address;
 
   if (!isOrderValid) {
-    // Форма заказа обновляется через событие data:changed от модели Buyer
-    // Здесь только проверяем валидность и не переходим дальше
     return;
   }
 
-  // Переходим к форме контактов
-  // Форма контактов обновляется через событие data:changed от модели Buyer
-  // Здесь только открываем модальное окно с формой контактов
   modal.render({ content: contactsElement });
-});
-
-// Завершение оформления заказа
-events.on("contacts:submit", async () => {
-  // Отправляем заказ на сервер
-  const buyerData = buyerModel.getData();
-  const cartItems = cartModel.getItems();
-  const total = cartModel.getTotal();
-
-  const order: IOrderRequest = {
-    payment: buyerData.payment,
-    email: buyerData.email,
-    phone: buyerData.phone,
-    address: buyerData.address,
-    total: total,
-    items: cartItems.map((item) => item.id),
-  };
-
-  try {
-    const response = await shopApi.createOrder(order);
-    console.log("Заказ создан:", response);
-
-    // Очищаем корзину и данные покупателя
-    // Модели отправят события об изменении, представления обновятся автоматически
-    cartModel.clear();
-    buyerModel.clear();
-
-    // Показываем окно успеха (открытие модального окна)
-    success.render({ total: response.total });
-    modal.render({ content: successElement });
-  } catch (error) {
-    console.error("Ошибка при создании заказа:", error);
-    alert("Произошла ошибка при оформлении заказа. Попробуйте еще раз.");
-  }
 });
 
 // Изменение способа оплаты
 events.on("order:payment:change", (data: { payment: string }) => {
-  buyerModel.setPayment(data.payment as any);
+  buyerModel.setPayment(data.payment as TPayment);
 });
 
 // Изменение адреса доставки
@@ -319,6 +286,36 @@ events.on("contacts:email:change", (data: { email: string }) => {
 // Изменение телефона
 events.on("contacts:phone:change", (data: { phone: string }) => {
   buyerModel.setPhone(data.phone);
+});
+
+// Завершение оформления заказа
+events.on("contacts:submit", async () => {
+  const buyerData = buyerModel.getData();
+  const cartItems = cartModel.getItems();
+  const total = cartModel.getTotal();
+
+  const orderData: IOrderRequest = {
+    payment: buyerData.payment,
+    email: buyerData.email,
+    phone: buyerData.phone,
+    address: buyerData.address,
+    total: total,
+    items: cartItems.map((item) => item.id),
+  };
+
+  try {
+    const response = await shopApi.createOrder(orderData);
+    console.log("Заказ создан:", response);
+
+    cartModel.clear();
+    buyerModel.clear();
+
+    success.render({ total: response.total });
+    modal.render({ content: successElement });
+  } catch (error) {
+    console.error("Ошибка при создании заказа:", error);
+    alert("Произошла ошибка при оформлении заказа. Попробуйте еще раз.");
+  }
 });
 
 // Закрытие модального окна

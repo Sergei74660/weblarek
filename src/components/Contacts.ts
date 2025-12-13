@@ -1,13 +1,12 @@
 import { ensureElement } from "../utils/utils";
 import { Form } from "./base/Form";
 import { IEvents } from "./base/Events";
-import { IBuyerErrors } from "../types";
 
 interface IContacts {
   email: string;
   phone: string;
-  errors: Partial<IBuyerErrors>;
-  valid?: boolean;
+  errors: string; // Изменено: теперь string
+  valid: boolean; // Обязательное поле
 }
 
 export class Contacts extends Form<IContacts> {
@@ -32,15 +31,8 @@ export class Contacts extends Form<IContacts> {
     this.setupEventListeners();
   }
 
-  protected getSubmitEventName(): string {
+  protected get submitEventName(): string {
     return "contacts:submit";
-  }
-
-  protected getErrorMessages(errors: Partial<IBuyerErrors>): string[] {
-    const errorMessages: string[] = [];
-    if (errors.email) errorMessages.push(errors.email);
-    if (errors.phone) errorMessages.push(errors.phone);
-    return errorMessages;
   }
 
   private setupEventListeners(): void {

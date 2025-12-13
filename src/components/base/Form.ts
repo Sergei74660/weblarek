@@ -1,7 +1,6 @@
 import { ensureElement } from "../../utils/utils";
 import { Component } from "./Component";
 import { IEvents } from "./Events";
-import { IBuyerErrors } from "../../types";
 
 export abstract class Form<T> extends Component<T> {
   protected submitButton: HTMLButtonElement;
@@ -29,20 +28,19 @@ export abstract class Form<T> extends Component<T> {
     if (this.container instanceof HTMLFormElement) {
       this.container.addEventListener("submit", (e) => {
         e.preventDefault();
-        this.events.emit(this.getSubmitEventName());
+        this.events.emit(this.submitEventName);
       });
     }
   }
 
-  protected abstract getSubmitEventName(): string;
+  protected abstract get submitEventName(): string;
 
-  protected abstract getErrorMessages(errors: Partial<IBuyerErrors>): string[];
-
-  set errors(value: Partial<IBuyerErrors>) {
-    const errorMessages = this.getErrorMessages(value);
-    this.errorsElement.textContent = errorMessages.join(", ");
+  // Установка ошибок (принимает строку)
+  set errors(value: string) {
+    this.errorsElement.textContent = value;
   }
 
+  // Установка валидности
   set valid(value: boolean) {
     this.submitButton.disabled = !value;
   }
