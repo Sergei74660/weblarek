@@ -22,46 +22,25 @@ import { Gallery } from "./components/Gallery";
 // ============ Вспомогательные функции ============
 
 /**
- * Создает и рендерит CardPreview с обработчиком клика для добавления/удаления из корзины
+ * Получает текст кнопки для товара на основе данных из корзины
+ * (Логика UI находится в презентере, а не в модели)
  */
-function createCardPreview(
-  previewElement: HTMLElement,
-  preview: IProduct,
-  events: EventEmitter,
-  cartModel: Cart
-) {
-  const card = new CardPreview(previewElement, {
-    onClick: () => {
-      const isInCart = cartModel.contains(preview.id);
-
-      if (isInCart) {
-        events.emit("card:remove", { id: preview.id });
-      } else {
-        events.emit("card:add", { id: preview.id });
-      }
-
-      renderCardPreview(card, preview, cartModel);
-    },
-  });
-
-  renderCardPreview(card, preview, cartModel);
+function getButtonText(product: IProduct, cart: Cart): string {
+  if (product.price === null) {
+    return "Недоступно";
+  }
+  return cart.contains(product.id) ? "Удалить из корзины" : "Купить";
 }
 
-function renderCardPreview(
-  card: CardPreview,
-  preview: IProduct,
-  cartModel: Cart
-): void {
-  card.render({
-    title: preview.title,
-    image: `${CDN_URL}/${preview.image}`,
-    category: preview.category,
-    price: preview.price,
-    description: preview.description,
-    buttonText: cartModel.getButtonText(preview),
-    buttonDisabled: cartModel.isButtonDisabled(preview),
-  });
+/**
+ * Проверяет, должна ли кнопка быть заблокирована
+ * (Логика UI находится в презентере, а не в модели)
+ */
+function isButtonDisabled(product: IProduct): boolean {
+  return product.price === null;
 }
+
+// ============ Инициализация ============
 
 // Инициализация моделей данных
 const catalogModel = new Catalog();
@@ -91,23 +70,24 @@ const orderTemplate = ensureElement<HTMLTemplateElement>("#order");
 const contactsTemplate = ensureElement<HTMLTemplateElement>("#contacts");
 const successTemplate = ensureElement<HTMLTemplateElement>("#success");
 
-// Создаем элемент корзины один раз из шаблона
+// Создаем элементы из шаблонов
 const basketElement = cloneTemplate<HTMLElement>(basketTemplate);
 const basket = new Basket(events, basketElement);
 
-// Создаем элемент формы заказа один раз из шаблона
 const orderElement = cloneTemplate<HTMLElement>(orderTemplate);
 const order = new Order(events, orderElement);
 
-// Создаем элемент окна успеха один раз из шаблона
 const successElement = cloneTemplate<HTMLElement>(successTemplate);
 const success = new Success(events, successElement);
 
-// Создаем элемент формы контактов один раз из шаблона
 const contactsElement = cloneTemplate<HTMLElement>(contactsTemplate);
 const contacts = new Contacts(events, contactsElement);
 
 // ============ Обработчики событий от моделей данных ============
+
+// Храним ссылки на текущие компоненты
+let currentPreview: IProduct | null = null;
+let currentPreviewCard: CardPreview | null = null;
 
 // Обработка изменения каталога товаров
 catalogModel.on("items:changed", () => {
@@ -141,8 +121,32 @@ catalogModel.on("preview:changed", () => {
     return;
   }
 
+  currentPreview = preview;
   const previewElement = cloneTemplate<HTMLElement>(cardPreviewTemplate);
-  createCardPreview(previewElement, preview, events, cartModel);
+  
+  // Создаем новый экземпляр CardPreview
+  currentPreviewCard = new CardPreview(previewElement, {
+    onClick: () => {
+      const isInCart = cartModel.contains(preview.id);
+
+      if (isInCart) {
+        events.emit("card:remove", { id: preview.id });
+      } else {
+        events.emit("card:add", { id: preview.id });
+      }
+    },
+  });
+
+  // Рендерим превью
+  currentPreviewCard.render({
+    title: preview.title,
+    image: `${CDN_URL}/${preview.image}`,
+    category: preview.category,
+    price: preview.price,
+    description: preview.description,
+    buttonText: getButtonText(preview, cartModel),
+    buttonDisabled: isButtonDisabled(preview),
+  });
 
   modal.render({ content: previewElement });
   modal.open();
@@ -157,7 +161,7 @@ cartModel.on("items:changed", () => {
   // Обновление счетчика в хедере
   header.render({ counter: count });
 
-  // Обновление корзины (всегда, чтобы она была актуальной при открытии)
+  // Обновление корзины
   const cardElements = items.map((item, index) => {
     const cardElement = cloneTemplate<HTMLElement>(cardBasketTemplate);
     const card = new CardBasket(cardElement, {
@@ -179,6 +183,20 @@ cartModel.on("items:changed", () => {
     items: cardElements,
     total: total,
   });
+
+  // Обновление кнопки в открытом превью, если оно есть
+  if (currentPreview && currentPreviewCard) {
+    // Обновляем только кнопку, перерендеривая карточку
+    currentPreviewCard.render({
+      title: currentPreview.title,
+      image: `${CDN_URL}/${currentPreview.image}`,
+      category: currentPreview.category,
+      price: currentPreview.price,
+      description: currentPreview.description,
+      buttonText: getButtonText(currentPreview, cartModel),
+      buttonDisabled: isButtonDisabled(currentPreview),
+    });
+  }
 });
 
 // Обработка изменения данных покупателя
@@ -202,16 +220,16 @@ buyerModel.on("data:changed", () => {
   order.render({
     payment: data.payment,
     address: data.address,
-    errors: orderErrorsString, // Строка с ошибками
-    valid: !allErrors.payment && !allErrors.address // true если нет ошибок
+    errors: orderErrorsString,
+    valid: !allErrors.payment && !allErrors.address
   });
 
   // Обновление формы контактов
   contacts.render({
     email: data.email,
     phone: data.phone,
-    errors: contactsErrorsString, // Строка с ошибками
-    valid: !allErrors.email && !allErrors.phone // true если нет ошибок
+    errors: contactsErrorsString,
+    valid: !allErrors.email && !allErrors.phone
   });
 });
 
@@ -309,6 +327,8 @@ events.on("contacts:submit", async () => {
 
     cartModel.clear();
     buyerModel.clear();
+    currentPreview = null;
+    currentPreviewCard = null;
 
     success.render({ total: response.total });
     modal.render({ content: successElement });
@@ -321,6 +341,8 @@ events.on("contacts:submit", async () => {
 // Закрытие модального окна
 events.on("modal:close", () => {
   catalogModel.setPreview(null);
+  currentPreview = null;
+  currentPreviewCard = null;
 });
 
 // Закрытие окна успеха

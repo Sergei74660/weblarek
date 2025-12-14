@@ -10,22 +10,14 @@ export class Gallery extends Component<IGallery> {
 
     constructor(container: HTMLElement, events: IEvents) {
         super(container);
-        
-        // Инициализируем контейнер для каталога
         this.catalogElement = container;
-        
-        // Дополнительная логика при необходимости
     }
 
+    // Setter для каталога, который будет автоматически вызываться
+    // из родительского метода render через Object.assign
     set catalog(items: HTMLElement[]) {
-        this.catalogElement.replaceChildren(...items);
-    }
-
-    // Метод для рендеринга галереи
-    render(data?: Partial<IGallery>): HTMLElement {
-        if (data && data.catalog) {
-            this.catalog = data.catalog;
+        if (items) {
+            this.catalogElement.replaceChildren(...items);
         }
-        return this.container;
     }
 }
